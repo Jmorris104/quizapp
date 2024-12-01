@@ -16,6 +16,9 @@ class _QuizScreenState extends State<QuizScreen> {
   String? _feedback;
   int _timeRemaining = 15; // Timer starts with 15 seconds
   Timer? _timer;
+  List<String> _userAnswers = [];
+  List<String> _correctAnswers = [];
+  List<bool> _answeredCorrectly = [];
 
   @override
   void initState() {
@@ -48,6 +51,9 @@ class _QuizScreenState extends State<QuizScreen> {
     _timer?.cancel();
     setState(() {
       _feedback = "Time's up! Correct answer: ${widget.questions[_currentQuestionIndex]['correct_answer']}";
+      _userAnswers.add('Time\'s up');
+      _correctAnswers.add(widget.questions[_currentQuestionIndex]['correct_answer']);
+      _answeredCorrectly.add(false);
     });
 
     // Move to the next question after a short delay
@@ -58,7 +64,7 @@ class _QuizScreenState extends State<QuizScreen> {
           _currentQuestionIndex++;
           _startTimer();
         } else {
-          _showFinalScore();
+          _showSummary();
         }
       });
     });
@@ -69,6 +75,10 @@ class _QuizScreenState extends State<QuizScreen> {
     final correctAnswer = widget.questions[_currentQuestionIndex]['correct_answer'];
 
     setState(() {
+      _userAnswers.add(userAnswer);
+      _correctAnswers.add(correctAnswer);
+      _answeredCorrectly.add(userAnswer == correctAnswer);
+
       if (userAnswer == correctAnswer) {
         _score++;
         _feedback = "Correct!";
@@ -84,30 +94,75 @@ class _QuizScreenState extends State<QuizScreen> {
             _currentQuestionIndex++;
             _startTimer();
           } else {
-            _showFinalScore();
+            _showSummary();
           }
         });
       });
     });
   }
 
-  void _showFinalScore() {
+  void _showSummary() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Quiz Completed!'),
-        content: Text('Your final score is $_score/${widget.questions.length}.'),
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Your final score is $_score/${widget.questions.length}.'),
+            SizedBox(height: 20),
+            Text('Correct Answers:'),
+            ...List.generate(widget.questions.length, (index) {
+              return Text(
+                '${widget.questions[index]['question']} \nYour Answer: ${_userAnswers[index]} \nCorrect Answer: ${_correctAnswers[index]} \n\n',
+                style: TextStyle(color: _answeredCorrectly[index] ? Colors.green : Colors.red),
+              );
+            }),
+            SizedBox(height: 20),
+            Text('Missed Questions:'),
+            ...List.generate(widget.questions.length, (index) {
+              if (!_answeredCorrectly[index]) {
+                return Text(
+                  '${widget.questions[index]['question']} \nCorrect Answer: ${_correctAnswers[index]} \n\n',
+                  style: TextStyle(color: Colors.red),
+                );
+              }
+              return Container(); // Empty container for answered questions
+            }),
+          ],
+        ),
         actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _retakeQuiz();
+            },
+            child: Text('Retake Quiz'),
+          ),
           TextButton(
             onPressed: () {
               Navigator.of(ctx).pop();
               Navigator.of(context).pop(); // Go back to the setup screen
             },
-            child: Text('OK'),
+            child: Text('Return to Setup'),
           ),
         ],
       ),
     );
+  }
+
+  void _retakeQuiz() {
+    setState(() {
+      _currentQuestionIndex = 0;
+      _score = 0;
+      _feedback = null;
+      _timeRemaining = 15;
+      _userAnswers.clear();
+      _correctAnswers.clear();
+      _answeredCorrectly.clear();
+    });
+    _startTimer();
   }
 
   @override
