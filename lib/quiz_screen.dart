@@ -1,3 +1,4 @@
+import 'dart:async'; // For Timer
 import 'package:flutter/material.dart';
 
 class QuizScreen extends StatefulWidget {
@@ -13,8 +14,58 @@ class _QuizScreenState extends State<QuizScreen> {
   int _currentQuestionIndex = 0;
   int _score = 0;
   String? _feedback;
+  int _timeRemaining = 15; // Timer starts with 15 seconds
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer?.cancel(); // Cancel any existing timer
+    _timeRemaining = 15;
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      if (_timeRemaining > 0) {
+        setState(() {
+          _timeRemaining--;
+        });
+      } else {
+        // Timer expired
+        _handleTimeOut();
+      }
+    });
+  }
+
+  void _handleTimeOut() {
+    _timer?.cancel();
+    setState(() {
+      _feedback = "Time's up! Correct answer: ${widget.questions[_currentQuestionIndex]['correct_answer']}";
+    });
+
+    // Move to the next question after a short delay
+    Future.delayed(Duration(seconds: 2), () {
+      setState(() {
+        _feedback = null;
+        if (_currentQuestionIndex < widget.questions.length - 1) {
+          _currentQuestionIndex++;
+          _startTimer();
+        } else {
+          _showFinalScore();
+        }
+      });
+    });
+  }
 
   void _answerQuestion(String userAnswer) {
+    _timer?.cancel(); // Stop the timer once the user answers
     final correctAnswer = widget.questions[_currentQuestionIndex]['correct_answer'];
 
     setState(() {
@@ -31,6 +82,7 @@ class _QuizScreenState extends State<QuizScreen> {
           _feedback = null;
           if (_currentQuestionIndex < widget.questions.length - 1) {
             _currentQuestionIndex++;
+            _startTimer();
           } else {
             _showFinalScore();
           }
@@ -95,9 +147,18 @@ class _QuizScreenState extends State<QuizScreen> {
                 _feedback!,
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
               ),
-            Text(
-              'Score: $_score',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Score: $_score',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'Time: $_timeRemaining',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _timeRemaining <= 5 ? Colors.red : Colors.black),
+                ),
+              ],
             ),
           ],
         ),
