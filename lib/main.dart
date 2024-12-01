@@ -1,6 +1,25 @@
 import 'package:flutter/material.dart';
+import 'quiz_screen.dart'; // Import the QuizScreen
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Quiz App',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: QuizSetupScreen(),
+    );
+  }
+}
 
 class QuizSetupScreen extends StatefulWidget {
   @override
@@ -8,22 +27,19 @@ class QuizSetupScreen extends StatefulWidget {
 }
 
 class _QuizSetupScreenState extends State<QuizSetupScreen> {
-  // User selections
   int _numberOfQuestions = 5;
   String? _selectedCategory;
   String? _selectedDifficulty;
   String? _selectedType;
 
-  // Category list
   List<Map<String, String>> _categories = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchCategories(); // Fetch categories on screen load
+    _fetchCategories();
   }
 
-  // Fetch trivia categories from the API
   Future<void> _fetchCategories() async {
     final response = await http.get(Uri.parse('https://opentdb.com/api_category.php'));
     if (response.statusCode == 200) {
@@ -36,17 +52,39 @@ class _QuizSetupScreenState extends State<QuizSetupScreen> {
                 })
             .toList();
       });
-    } else {
-      // Handle error
-      print("Failed to load categories");
     }
   }
 
-  // List of difficulty levels
   final List<String> _difficulties = ['easy', 'medium', 'hard'];
-
-  // List of question types
   final List<String> _questionTypes = ['multiple', 'boolean'];
+
+  void _startQuiz() async {
+    // Fetch questions from Open Trivia Database
+    final url = Uri.parse(
+      'https://opentdb.com/api.php?amount=$_numberOfQuestions&category=$_selectedCategory&difficulty=$_selectedDifficulty&type=$_selectedType',
+    );
+
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      final questions = (data['results'] as List).map((q) => {
+            'question': q['question'],
+            'correct_answer': q['correct_answer'],
+            'incorrect_answers': q['incorrect_answers'],
+          }).toList();
+
+      // Navigate to the QuizScreen with fetched questions
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => QuizScreen(questions: questions),
+        ),
+      );
+    } else {
+      print('Failed to fetch questions');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +97,6 @@ class _QuizSetupScreenState extends State<QuizSetupScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Number of Questions
             Text('Number of Questions', style: TextStyle(fontWeight: FontWeight.bold)),
             DropdownButton<int>(
               value: _numberOfQuestions,
@@ -75,10 +112,7 @@ class _QuizSetupScreenState extends State<QuizSetupScreen> {
                 });
               },
             ),
-
             SizedBox(height: 16.0),
-
-            // Category Selection
             Text('Select Category', style: TextStyle(fontWeight: FontWeight.bold)),
             _categories.isEmpty
                 ? CircularProgressIndicator()
@@ -96,10 +130,7 @@ class _QuizSetupScreenState extends State<QuizSetupScreen> {
                       });
                     },
                   ),
-
             SizedBox(height: 16.0),
-
-            // Difficulty Selection
             Text('Select Difficulty', style: TextStyle(fontWeight: FontWeight.bold)),
             DropdownButton<String>(
               value: _selectedDifficulty,
@@ -115,10 +146,7 @@ class _QuizSetupScreenState extends State<QuizSetupScreen> {
                 });
               },
             ),
-
             SizedBox(height: 16.0),
-
-            // Question Type Selection
             Text('Select Question Type', style: TextStyle(fontWeight: FontWeight.bold)),
             DropdownButton<String>(
               value: _selectedType,
@@ -134,37 +162,16 @@ class _QuizSetupScreenState extends State<QuizSetupScreen> {
                 });
               },
             ),
-
             Spacer(),
-
-            // Submit Button
             ElevatedButton(
               onPressed: _selectedCategory == null || _selectedDifficulty == null || _selectedType == null
                   ? null
-                  : () {
-                      _fetchQuizQuestions();
-                    },
+                  : _startQuiz,
               child: Text('Start Quiz'),
             ),
           ],
         ),
       ),
     );
-  }
-
-  // Fetch quiz questions based on user selections
-  Future<void> _fetchQuizQuestions() async {
-    final url = Uri.parse(
-      'https://opentdb.com/api.php?amount=$_numberOfQuestions&category=$_selectedCategory&difficulty=$_selectedDifficulty&type=$_selectedType',
-    );
-
-    final response = await http.get(url);
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      print(data); // Replace this with navigation to the quiz screen
-    } else {
-      print('Failed to fetch questions');
-    }
   }
 }
