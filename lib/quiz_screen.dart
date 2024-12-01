@@ -116,6 +116,9 @@ class _QuizScreenState extends State<QuizScreen> {
     final answers = [...currentQuestion['incorrect_answers'], currentQuestion['correct_answer']];
     answers.shuffle(); // Randomize answer order
 
+    // Calculate progress as a fraction of questions answered
+    double progress = (_currentQuestionIndex + 1) / widget.questions.length;
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Quiz App'),
@@ -125,6 +128,15 @@ class _QuizScreenState extends State<QuizScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Progress Bar
+            LinearProgressIndicator(
+              value: progress,
+              minHeight: 8.0,
+              backgroundColor: Colors.grey[300],
+              color: Colors.blue,
+            ),
+            SizedBox(height: 16.0),
+            
             Text(
               'Question ${_currentQuestionIndex + 1}/${widget.questions.length}',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
