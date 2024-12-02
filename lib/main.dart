@@ -14,7 +14,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Quiz App',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.red,
       ),
       home: QuizSetupScreen(),
     );
@@ -46,11 +46,12 @@ class _QuizSetupScreenState extends State<QuizSetupScreen> {
       final data = json.decode(response.body);
       setState(() {
         _categories = (data['trivia_categories'] as List)
-            .map((category) => {
-                  'id': category['id'].toString(),
-                  'name': category['name'],
-                })
-            .toList();
+    .map<Map<String, String>>((category) => {
+          'id': category['id'].toString(),
+          'name': category['name'] as String,
+        })
+    .toList();
+
       });
     }
   }
